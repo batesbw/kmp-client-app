@@ -2,26 +2,7 @@ package com.mass.client.core.model
 
 // Enums based on frontend/src/plugins/api/interfaces.ts
 
-enum class MediaType {
-    ARTIST,
-    ALBUM,
-    TRACK,
-    PLAYLIST,
-    RADIO,
-    AUDIOBOOK,
-    PODCAST,
-    PODCAST_EPISODE,
-    FOLDER,
-    UNKNOWN
-}
-
-enum class AlbumType {
-    ALBUM,
-    SINGLE,
-    COMPILATION,
-    EP,
-    UNKNOWN
-}
+// MediaType and AlbumType removed, defined in MediaItems.kt
 
 // Note: ContentType in frontend is very extensive. We might only need a subset initially
 // For now, a simplified version or just a String might be used in models needing it.

@@ -151,11 +151,11 @@ class MainDataSource(
                 }
             }
         }
-        launch {
+        /*launch {
             playersData.filter { it.isNotEmpty() }.first {
                 it.first().player.id == localPlayerId && _selectedPlayerData.value == null
             }.let { selectPlayer(it.first().player) }
-        }
+        }*/
     }
 
     private fun initBuiltinPlayer() {

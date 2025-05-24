@@ -6,16 +6,26 @@ import com.mass.client.core.model.QueueItem
 import com.mass.client.core.model.QueueOption
 import com.mass.client.core.model.RepeatMode
 import com.mass.client.core.model.Track
-import com.mass.client.core.model.MediaItem // For playMedia item type
+import com.mass.client.core.model.Artist
+import com.mass.client.core.model.Album
+import com.mass.client.core.model.ItemMapping
+import com.mass.client.core.model.MediaType
+import com.mass.client.feature_home.model.UiPlayer
+import com.mass.client.feature_home.model.RecentlyPlayedItemUiModel
+import io.music_assistant.client.data.model.server.ServerMediaItem
+import kotlinx.coroutines.flow.StateFlow
 
 /**
  * Interface for all Music Assistant API calls.
  */
 interface ApiService {
 
+    // Player State Flow
+    val players: StateFlow<List<UiPlayer>>
+
     // Player Commands
     suspend fun playerCommandPlayPause(playerId: String)
-    suspend fun playerCommandStop(playerId: String) // Added for completeness
+    suspend fun playerCommandStop(playerId: String)
     suspend fun playerCommandNext(playerId: String)
     suspend fun playerCommandPrevious(playerId: String)
     suspend fun playerCommandSeek(playerId: String, positionSeconds: Int)
@@ -54,6 +64,29 @@ interface ApiService {
         offset: Int? = null,
         orderBy: String? = null
     ): List<Track>
+
+    suspend fun getLibraryArtists(
+        favorite: Boolean? = null,
+        search: String? = null,
+        limit: Int? = null,
+        offset: Int? = null,
+        orderBy: String? = null
+    ): List<Artist>
+
+    suspend fun getLibraryAlbums(
+        favorite: Boolean? = null,
+        search: String? = null,
+        limit: Int? = null,
+        offset: Int? = null,
+        orderBy: String? = null
+        // TODO: Potentially add artistId or other filters if API supports
+    ): List<Album>
+
+    // Recently Played
+    suspend fun getRecentlyPlayedItems(
+        limit: Int = 10,
+        mediaTypes: List<MediaType>? = null
+    ): List<ItemMapping>
 
     // State Fetching (initial load - though WS events are primary for updates)
     suspend fun getAllPlayers(): List<Player>

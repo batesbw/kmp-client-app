@@ -48,6 +48,11 @@ import compose.icons.fontawesomeicons.solid.Cog
 import io.music_assistant.client.ui.compose.common.VerticalHidingContainer
 import io.music_assistant.client.ui.compose.library.LibraryScreen
 import io.music_assistant.client.ui.compose.settings.SettingsScreen
+import com.mass.client.feature_home.ui.HomeScreen
+import com.mass.client.feature_home.viewmodel.HomeViewModel
+import org.koin.compose.koinInject
+import com.mass.client.core.model.Artist
+import com.mass.client.core.model.Album
 
 class MainScreen : Screen {
     @Composable
@@ -225,26 +230,36 @@ class MainScreen : Screen {
                 }
             }
 
-            playersData
-                .firstOrNull { it.player.id == selectedPlayerData?.playerId }
-                ?.let { playerData ->
+            if (selectedPlayerData != null) {
+                val currentPlayerData = playersData.firstOrNull { it.player.id == selectedPlayerData.playerId }
+                if (currentPlayerData != null) {
                     PlayerDetails(
                         modifier = Modifier.fillMaxSize(),
                         nestedScrollConnection = nestedScrollConnection,
-                        playerData = playerData,
-                        queueItems = selectedPlayerData?.queueItems,
-                        chosenItemsIds = selectedPlayerData?.chosenItemsIds,
+                        playerData = currentPlayerData,
+                        queueItems = selectedPlayerData.queueItems,
+                        chosenItemsIds = selectedPlayerData.chosenItemsIds,
                         queueAction = { action ->
                             viewModel.queueAction(action)
                         },
                         onItemChosenChanged = { id ->
-                            viewModel.onItemChosenChanged(
-                                id
-                            )
+                            viewModel.onItemChosenChanged(id)
                         },
                         onChosenItemsClear = { viewModel.onChosenItemsClear() }
                     )
                 }
+            } else {
+                val homeViewModel: HomeViewModel = koinInject()
+                HomeScreen(
+                    viewModel = homeViewModel,
+                    onArtistClick = { artist ->
+                        println("MainScreen: Artist clicked: ${artist.name} - Navigation not yet implemented.")
+                    },
+                    onAlbumClick = { album ->
+                        println("MainScreen: Album clicked: ${album.name} - Navigation not yet implemented.")
+                    }
+                )
+            }
         }
     }
 }

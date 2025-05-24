@@ -6,18 +6,51 @@ import com.mass.client.core.model.QueueItem
 import com.mass.client.core.model.QueueOption
 import com.mass.client.core.model.RepeatMode
 import com.mass.client.core.model.Track
+import com.mass.client.core.model.Artist
+import com.mass.client.core.model.Album
+import com.mass.client.core.model.ItemMapping
+import com.mass.client.core.model.MediaType
+import com.mass.client.feature_home.model.UiPlayer
+import com.mass.client.feature_home.model.toUiPlayer
+import io.music_assistant.client.data.MainDataSource
+import io.music_assistant.client.data.model.server.ServerMediaItem
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
-import kotlinx.serialization.json.put
-import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.decodeFromJsonElement
+import kotlinx.serialization.builtins.ListSerializer
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class ApiServiceImpl(
     private val webSocketClient: WebSocketClient,
-    private val json: Json // Keep for potential complex arg serialization if needed
+    private val json: Json,
+    private val mainDataSource: MainDataSource
 ) : ApiService {
+
+    // CoroutineScope for stateIn operator
+    private val serviceScope = CoroutineScope(Dispatchers.Default)
+
+    override val players: StateFlow<List<UiPlayer>> =
+        mainDataSource.playersData
+            .map { playerDataList ->
+                playerDataList.map { playerData ->
+                    playerData.toUiPlayer()
+                }
+            }
+            .stateIn(
+                scope = serviceScope,
+                started = SharingStarted.WhileSubscribed(5000),
+                initialValue = emptyList()
+            )
 
     // Helper to construct args map with JsonElement values
     private fun jsonArgs(vararg pairs: Pair<String, Any?>): Map<String, JsonElement?>? {
@@ -56,47 +89,58 @@ class ApiServiceImpl(
     }
 
     override suspend fun playerCommandPlayPause(playerId: String) {
+        webSocketClient.awaitConnectionReady()
         webSocketClient.sendCommand("players/cmd/play_pause", jsonArgs("player_id" to playerId))
     }
 
     override suspend fun playerCommandStop(playerId: String) {
+        webSocketClient.awaitConnectionReady()
         webSocketClient.sendCommand("players/cmd/stop", jsonArgs("player_id" to playerId))
     }
 
     override suspend fun playerCommandNext(playerId: String) {
+        webSocketClient.awaitConnectionReady()
         webSocketClient.sendCommand("players/cmd/next", jsonArgs("player_id" to playerId))
     }
 
     override suspend fun playerCommandPrevious(playerId: String) {
+        webSocketClient.awaitConnectionReady()
         webSocketClient.sendCommand("players/cmd/previous", jsonArgs("player_id" to playerId))
     }
 
     override suspend fun playerCommandSeek(playerId: String, positionSeconds: Int) {
+        webSocketClient.awaitConnectionReady()
         webSocketClient.sendCommand("players/cmd/seek", jsonArgs("player_id" to playerId, "position" to positionSeconds))
     }
 
     override suspend fun playerCommandPowerToggle(playerId: String) {
+        webSocketClient.awaitConnectionReady()
         println("ApiServiceImpl: WARN - playerCommandPowerToggle needs current player state or a dedicated server toggle command. Assuming POWER ON for now.")
         webSocketClient.sendCommand("players/cmd/power", jsonArgs("player_id" to playerId, "powered" to true))
     }
 
     override suspend fun playerCommandVolumeSet(playerId: String, volumeLevel: Int) {
+        webSocketClient.awaitConnectionReady()
         webSocketClient.sendCommand("players/cmd/volume_set", jsonArgs("player_id" to playerId, "volume_level" to volumeLevel))
     }
 
     override suspend fun queueCommandShuffle(queueId: String, shuffleEnabled: Boolean) {
+        webSocketClient.awaitConnectionReady()
         webSocketClient.sendCommand("player_queues/shuffle", jsonArgs("queue_id" to queueId, "shuffle_enabled" to shuffleEnabled))
     }
 
     override suspend fun queueCommandRepeat(queueId: String, repeatMode: RepeatMode) {
+        webSocketClient.awaitConnectionReady()
         webSocketClient.sendCommand("player_queues/repeat", jsonArgs("queue_id" to queueId, "repeat_mode" to repeatMode.name.lowercase()))
     }
 
     override suspend fun queueCommandPlayIndex(queueId: String, index: Int) {
+        webSocketClient.awaitConnectionReady()
         webSocketClient.sendCommand("player_queues/play_index", jsonArgs("queue_id" to queueId, "index" to index))
     }
 
     override suspend fun queueCommandClear(queueId: String) {
+        webSocketClient.awaitConnectionReady()
         webSocketClient.sendCommand("player_queues/clear", jsonArgs("queue_id" to queueId))
     }
 
@@ -107,6 +151,7 @@ class ApiServiceImpl(
         radioMode: Boolean?,
         startItemId: String?
     ) {
+        webSocketClient.awaitConnectionReady()
         webSocketClient.sendCommand("player_queues/play_media", jsonArgs(
             "queue_id" to queueId,
             "media" to media, // jsonArgs helper will turn this into a JsonArray of JsonPrimitives
@@ -123,36 +168,105 @@ class ApiServiceImpl(
         offset: Int?,
         orderBy: String?
     ): List<Track> {
-        webSocketClient.sendCommand("music/tracks/library_items", jsonArgs(
+        webSocketClient.awaitConnectionReady()
+        val resultElement = webSocketClient.sendCommandAndWaitForResponse("music/tracks/library_items", jsonArgs(
             "favorite" to favorite,
             "search" to search,
             "limit" to limit,
             "offset" to offset,
             "order_by" to orderBy
         ))
-        println("ApiServiceImpl: WARN - getLibraryTracks called, but response handling from WebSocket not yet implemented.")
-        return emptyList()
+        return resultElement?.let { json.decodeFromJsonElement(ListSerializer(Track.serializer()), it) } ?: emptyList()
+    }
+
+    override suspend fun getLibraryArtists(
+        favorite: Boolean?,
+        search: String?,
+        limit: Int?,
+        offset: Int?,
+        orderBy: String?
+    ): List<Artist> {
+        webSocketClient.awaitConnectionReady()
+        val resultElement = webSocketClient.sendCommandAndWaitForResponse("music/artists/library_items", jsonArgs(
+            "favorite" to favorite,
+            "search" to search,
+            "limit" to limit,
+            "offset" to offset,
+            "order_by" to orderBy
+        ))
+        // Assuming the server endpoint for artists is "music/artists"
+        // and it supports these parameters. This needs to be verified with the server API.
+        return resultElement?.let { json.decodeFromJsonElement(ListSerializer(Artist.serializer()), it) } ?: emptyList()
+    }
+
+    override suspend fun getLibraryAlbums(
+        favorite: Boolean?,
+        search: String?,
+        limit: Int?,
+        offset: Int?,
+        orderBy: String?
+    ): List<Album> {
+        webSocketClient.awaitConnectionReady()
+        val resultElement = webSocketClient.sendCommandAndWaitForResponse("music/albums/library_items", jsonArgs(
+            "favorite" to favorite,
+            "search" to search,
+            "limit" to limit,
+            "offset" to offset,
+            "order_by" to orderBy
+        ))
+        // Assuming the server endpoint for albums is "music/albums"
+        // and it supports these parameters. This needs to be verified with the server API.
+        return resultElement?.let { json.decodeFromJsonElement(ListSerializer(Album.serializer()), it) } ?: emptyList()
     }
 
     override suspend fun getAllPlayers(): List<Player> {
-        webSocketClient.sendCommand("players/all", null) // No args for this command
-        println("ApiServiceImpl: INFO - getAllPlayers command sent. Player list will be populated by WebSocket events.")
-        return emptyList()
+        webSocketClient.awaitConnectionReady()
+        val resultElement = webSocketClient.sendCommandAndWaitForResponse("players/all", null)
+        return resultElement?.let { json.decodeFromJsonElement(ListSerializer(Player.serializer()), it) } ?: emptyList()
     }
 
     override suspend fun getAllPlayerQueues(): List<PlayerQueue> {
-        webSocketClient.sendCommand("player_queues/all", null) // No args for this command
-        println("ApiServiceImpl: INFO - getAllPlayerQueues command sent. Queue list will be populated by WebSocket events.")
-        return emptyList()
+        webSocketClient.awaitConnectionReady()
+        val resultElement = webSocketClient.sendCommandAndWaitForResponse("player_queues/all", null)
+        return resultElement?.let { json.decodeFromJsonElement(ListSerializer(PlayerQueue.serializer()), it) } ?: emptyList()
     }
 
     override suspend fun getQueueItems(queueId: String, limit: Int, offset: Int): List<QueueItem> {
-        webSocketClient.sendCommand("player_queues/items", jsonArgs(
+        webSocketClient.awaitConnectionReady()
+        val resultElement = webSocketClient.sendCommandAndWaitForResponse("player_queues/items", jsonArgs(
             "queue_id" to queueId,
             "limit" to limit,
             "offset" to offset
         ))
-        println("ApiServiceImpl: WARN - getQueueItems called, but response handling from WebSocket not yet implemented.")
-        return emptyList()
+        return resultElement?.let { json.decodeFromJsonElement(ListSerializer(QueueItem.serializer()), it) } ?: emptyList()
+    }
+
+    override suspend fun getRecentlyPlayedItems(
+        limit: Int,
+        mediaTypes: List<com.mass.client.core.model.MediaType>?
+    ): List<ItemMapping> {
+        webSocketClient.awaitConnectionReady()
+        val args = mutableMapOf<String, Any?>("limit" to limit)
+        mediaTypes?.let {
+            args["media_types"] = it.map { type -> type.name.lowercase() }
+        }
+        println("#### ApiServiceImpl: Sending command music/recently_played_items with args: $args")
+        try {
+            val resultElement = webSocketClient.sendCommandAndWaitForResponse(
+                "music/recently_played_items", // Correct endpoint
+                jsonArgs(*args.toList().toTypedArray())
+            )
+            println("#### ApiServiceImpl: music/recently_played_items RAW RESPONSE: $resultElement")
+            if (resultElement == null) {
+                println("#### ApiServiceImpl: music/recently_played_items - Received NULL resultElement from sendCommandAndWaitForResponse")
+                return emptyList()
+            }
+            return json.decodeFromJsonElement(ListSerializer(ItemMapping.serializer()), resultElement)
+        } catch (e: Exception) {
+            println("#### ApiServiceImpl: ERROR in getRecentlyPlayedItems for music/recently_played_items: ${e.message}")
+            // e.printStackTrace() // Standard Kotlin doesn't have printStackTrace like this in common code, use .toString() or specific logging
+            println("#### ApiServiceImpl: Exception details: ${e.toString()}")
+            return emptyList()
+        }
     }
 } 

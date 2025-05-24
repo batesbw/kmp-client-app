@@ -10,7 +10,7 @@ import androidx.lifecycle.asLiveData
 import androidx.lifecycle.lifecycleScope
 import io.music_assistant.client.data.MainDataSource
 import io.music_assistant.client.services.MainMediaPlaybackService
-import io.music_assistant.client.ui.compose.App
+import com.mass.client.App
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject

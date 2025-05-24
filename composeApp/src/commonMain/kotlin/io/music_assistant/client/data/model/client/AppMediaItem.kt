@@ -1,8 +1,24 @@
 package io.music_assistant.client.data.model.client
 
-import io.music_assistant.client.data.model.server.MediaType
+import com.mass.client.core.model.MediaType
 import io.music_assistant.client.data.model.server.Metadata
 import io.music_assistant.client.data.model.server.ServerMediaItem
+import io.music_assistant.client.data.model.server.MediaType as ServerMediaType
+
+// Convert old MediaType to new MediaType
+private fun ServerMediaType.toNewMediaType(): MediaType = when (this) {
+    ServerMediaType.ARTIST -> MediaType.artist
+    ServerMediaType.ALBUM -> MediaType.album
+    ServerMediaType.TRACK -> MediaType.track
+    ServerMediaType.PLAYLIST -> MediaType.playlist
+    ServerMediaType.RADIO -> MediaType.radio
+    ServerMediaType.AUDIOBOOK -> MediaType.audiobook
+    ServerMediaType.PODCAST -> MediaType.podcast
+    ServerMediaType.PODCAST_EPISODE -> MediaType.podcast_episode
+    ServerMediaType.FOLDER -> MediaType.folder
+    ServerMediaType.UNKNOWN -> MediaType.unknown
+    else -> MediaType.unknown // fallback for any other values
+}
 
 abstract class AppMediaItem(
     val itemId: String,
@@ -60,7 +76,7 @@ abstract class AppMediaItem(
         //providerMappings,
         metadata,
         //favorite,
-        MediaType.ARTIST,
+        MediaType.artist,
         //sortName,
         uri,
         //isPlayable,
@@ -93,7 +109,7 @@ abstract class AppMediaItem(
         //providerMappings,
         metadata,
         //favorite,
-        MediaType.ALBUM,
+        MediaType.album,
         //sortName,
         uri,
         //isPlayable,
@@ -134,7 +150,7 @@ abstract class AppMediaItem(
         //providerMappings,
         metadata,
         //favorite,
-        MediaType.TRACK,
+        MediaType.track,
         //sortName,
         uri,
         //isPlayable,
@@ -168,7 +184,7 @@ abstract class AppMediaItem(
         //providerMappings,
         metadata,
         //favorite,
-        MediaType.PLAYLIST,
+        MediaType.playlist,
         //sortName,
         uri,
         //isPlayable,
@@ -180,92 +196,50 @@ abstract class AppMediaItem(
 
     companion object {
         fun ServerMediaItem.toAppMediaItem(): AppMediaItem? =
-            when (mediaType) {
-                MediaType.ARTIST -> Artist(
+            when (mediaType.toNewMediaType()) {
+                MediaType.artist -> Artist(
                     itemId = itemId,
                     provider = provider,
                     name = name,
-//                    providerMappings = providerMappings,
                     metadata = metadata,
-//                    favorite = favorite,
-//                    mediaType = mediaType,
-//                    sortName = sortName,
                     uri = uri,
-//                    isPlayable = isPlayable,
-//                    timestampAdded = timestampAdded,
-//                    timestampModified = timestampModified,
-//                    musicbrainzId = musicbrainzId,
                 )
 
-                MediaType.ALBUM -> Album(
+                MediaType.album -> Album(
                     itemId = itemId,
                     provider = provider,
                     name = name,
-//                    providerMappings = providerMappings,
                     metadata = metadata,
-//                    favorite = favorite,
-//                    mediaType = mediaType,
-//                    sortName = sortName,
                     uri = uri,
-//                    isPlayable = isPlayable,
-//                    timestampAdded = timestampAdded,
-//                    timestampModified = timestampModified,
-//                    musicbrainzId = musicbrainzId,
-                    //version = version,
-//                    year = year,
                     artists = artists?.mapNotNull { it.toAppMediaItem() as? Artist },
-//                    albumType = albumType,
                 )
 
-                MediaType.TRACK -> Track(
+                MediaType.track -> Track(
                     itemId = itemId,
                     provider = provider,
                     name = name,
-//                    providerMappings = providerMappings,
                     metadata = metadata,
-//                    favorite = favorite,
-//                    mediaType = mediaType,
-//                    sortName = sortName,
                     uri = uri,
-//                    isPlayable = isPlayable,
-//                    timestampAdded = timestampAdded,
-//                    timestampModified = timestampModified,
-//                    musicbrainzId = musicbrainzId,
-                    //version = version,
                     duration = duration,
-//                    isrc = isrc,
                     artists = artists?.mapNotNull { it.toAppMediaItem() as? Artist },
-//                    album = album?.let { from(it) as? Album },
-//                    discNumber = discNumber,
-//                    trackNumber = trackNumber,
-//                    position = position,
                 )
 
-                MediaType.PLAYLIST -> Playlist(
+                MediaType.playlist -> Playlist(
                     itemId = itemId,
                     provider = provider,
                     name = name,
-                    //providerMappings = providerMappings,
                     metadata = metadata,
-                    //favorite = favorite,
-//                    mediaType = mediaType,
-//                    sortName = sortName,
                     uri = uri,
-                    //isPlayable = isPlayable,
-//                    timestampAdded = timestampAdded,
-//                    timestampModified = timestampModified,
-//                    owner = owner,
-//                    isEditable = isEditable,
                 )
 
-                MediaType.RADIO,
-                MediaType.AUDIOBOOK,
-                MediaType.PODCAST,
-                MediaType.PODCAST_EPISODE,
-                MediaType.FOLDER,
-                MediaType.FLOW_STREAM,
-                MediaType.ANNOUNCEMENT,
-                MediaType.UNKNOWN -> null
+                MediaType.radio,
+                MediaType.audiobook,
+                MediaType.podcast,
+                MediaType.podcast_episode,
+                MediaType.folder,
+                MediaType.unknown -> null
+                
+                else -> null // Handle any other cases
             }
 
         fun List<ServerMediaItem>.toAppMediaItemList() =

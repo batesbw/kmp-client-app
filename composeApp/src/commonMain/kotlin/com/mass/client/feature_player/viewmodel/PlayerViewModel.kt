@@ -81,11 +81,18 @@ class PlayerViewModel(
             .onEach { event -> handleServerEvent(event) }
             .launchIn(viewModelScope)
 
+        loadAvailablePlayers()
+    }
+
+    private fun loadAvailablePlayers() {
         viewModelScope.launch {
             try {
-                apiService.getAllPlayers()
+                _availablePlayers.value = apiService.getAllPlayers()
+                if (_availablePlayers.value.isEmpty()) {
+                    println("PlayerViewModel: getAllPlayers returned empty. Waiting for WebSocket events or check server.")
+                }
             } catch (e: Exception) {
-                println("PlayerViewModel: Error requesting all players: ${e.message}")
+                println("PlayerViewModel: Error fetching all players: ${e.message}")
             }
         }
     }
@@ -96,7 +103,14 @@ class PlayerViewModel(
                 serverEvent.data?.let {
                     try {
                         val player = json.decodeFromJsonElement<Player>(it)
-                        _availablePlayers.value = _availablePlayers.value.filterNot { p -> p.player_id == player.player_id } + player
+                        val currentList = _availablePlayers.value.toMutableList()
+                        val existingPlayerIndex = currentList.indexOfFirst { p -> p.player_id == player.player_id }
+                        if (existingPlayerIndex != -1) {
+                            currentList[existingPlayerIndex] = player
+                        } else {
+                            currentList.add(player)
+                        }
+                        _availablePlayers.value = currentList
                         
                         if (player.player_id == _observedPlayerId.value) {
                             _activePlayer.value = player
@@ -104,6 +118,15 @@ class PlayerViewModel(
                         }
                     } catch (e: Exception) {
                         println("PlayerViewModel: Error parsing PLAYER_UPDATED data: ${e.message} from data: $it")
+                    }
+                }
+            }
+            "PLAYER_REMOVED" -> {
+                serverEvent.object_id?.let { playerIdToRemove ->
+                    _availablePlayers.value = _availablePlayers.value.filterNot { p -> p.player_id == playerIdToRemove }
+                    if (playerIdToRemove == _observedPlayerId.value) {
+                        clearActivePlayerData()
+                        _observedPlayerId.value = null
                     }
                 }
             }
@@ -120,8 +143,33 @@ class PlayerViewModel(
                     }
                 }
             }
+            "QUEUE_ITEMS_UPDATED" -> {
+                serverEvent.data?.let {
+                    try {
+                        val qId = serverEvent.object_id
+                        if (qId == _observedPlayerId.value) {
+                            println("PlayerViewModel: QUEUE_ITEMS_UPDATED received for $qId, reloading items.")
+                            loadQueueItems()
+                        }
+                    } catch (e: Exception) {
+                        println("PlayerViewModel: Error parsing QUEUE_ITEMS_UPDATED data: ${e.message} from data: $it")
+                    }
+                }
+            }
             else -> Unit
         }
+    }
+
+    private fun clearActivePlayerData() {
+        _activePlayer.value = null
+        _activeQueue.value = null
+        _currentTrackName.value = "Nothing Playing"
+        _currentTrackArtist.value = ""
+        _currentTrackArtworkUrl.value = null
+        _isPlaying.value = false
+        _progress.value = 0f
+        _playerState.value = PlayerState.IDLE
+        _currentQueueItems.value = emptyList()
     }
 
     private fun updateUiFromPlayer(player: Player) {
@@ -168,27 +216,31 @@ class PlayerViewModel(
     }
 
     fun setActivePlayer(playerId: String) {
-        if (_observedPlayerId.value == playerId && _activePlayer.value?.player_id == playerId) return
-
+        if (_observedPlayerId.value == playerId && _activePlayer.value?.player_id == playerId) {
+            if (_currentQueueItems.value.isEmpty() && _activeQueue.value != null) loadQueueItems()
+            return
+        }
         println("PlayerViewModel: Setting active player to $playerId")
+        clearActivePlayerData()
         _observedPlayerId.value = playerId
-        
-        _activePlayer.value = null
-        _activeQueue.value = null
-        _currentTrackName.value = "Loading..."
-        _currentTrackArtist.value = ""
-        _currentTrackArtworkUrl.value = null
-        _isPlaying.value = false
-        _progress.value = 0f
-        _playerState.value = PlayerState.IDLE
-        _currentQueueItems.value = emptyList()
 
         _availablePlayers.value.find { it.player_id == playerId }?.let {
             _activePlayer.value = it
             updateUiFromPlayer(it)
         }
         viewModelScope.launch {
-            loadQueueItems()
+            try {
+                val queue = apiService.getAllPlayerQueues().find { it.queue_id == playerId }
+                if (queue != null) {
+                    _activeQueue.value = queue
+                    updateUiFromQueue(queue)
+                    loadQueueItems()
+                } else {
+                    println("PlayerViewModel: No specific queue found for $playerId initially, relying on events.")
+                }
+            } catch (e: Exception) {
+                println("PlayerViewModel: Error fetching queue for $playerId: ${e.message}")
+            }
         }
     }
 

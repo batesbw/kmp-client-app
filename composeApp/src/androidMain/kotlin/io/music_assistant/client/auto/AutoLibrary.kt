@@ -20,10 +20,11 @@ import io.music_assistant.client.api.searchRequest
 import io.music_assistant.client.data.model.client.AppMediaItem
 import io.music_assistant.client.data.model.client.AppMediaItem.Companion.toAppMediaItem
 import io.music_assistant.client.data.model.client.AppMediaItem.Companion.toAppMediaItemList
-import io.music_assistant.client.data.model.server.MediaType
+import com.mass.client.core.model.MediaType
 import io.music_assistant.client.data.model.server.QueueOption
 import io.music_assistant.client.data.model.server.SearchResult
 import io.music_assistant.client.data.model.server.ServerMediaItem
+import io.music_assistant.client.data.model.server.MediaType as ServerMediaType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -56,11 +57,11 @@ class AutoLibrary(
                         searchRequest(
                             query,
                             listOf(
-                                MediaType.ARTIST,
-                                MediaType.ALBUM,
-                                MediaType.TRACK,
-                                MediaType.PLAYLIST
-                            )
+                                MediaType.artist,
+                                MediaType.album,
+                                MediaType.track,
+                                MediaType.playlist
+                            ).map { it.toServerMediaType() }
                         )
                     )
                     answer?.resultAs<SearchResult>()?.let {
@@ -110,10 +111,10 @@ class AutoLibrary(
                     return
                 }
                 result.detach()
-                val parentType = MediaType.valueOf(parts[2])
+                val parentType = MediaType.valueOf(parts[2].lowercase())
                 val requestAndCategory = when (parentType) {
-                    MediaType.ARTIST -> getArtistAlbumsRequest(parts[0], parts[3])
-                    MediaType.ALBUM -> getAlbumTracksRequest(parts[0], parts[3])
+                    MediaType.artist -> getArtistAlbumsRequest(parts[0], parts[3])
+                    MediaType.album -> getAlbumTracksRequest(parts[0], parts[3])
                     else -> {
                         result.sendResult(null)
                         return
@@ -208,13 +209,17 @@ internal object MediaIds {
     const val TAB_ARTISTS = "auto_lib_artists"
     const val TAB_PLAYLISTS = "auto_lib_playlists"
     const val QUEUE_OPTION_KEY = "auto_queue_option"
+    const val ARTIST_ACTIONS = "artists_actions"
+    const val ALBUM_ACTIONS = "album_actions"
+    const val CATEGORY_KEY = "category_key"
+    const val PLAYABLE_PREFIX = "playable_"
 }
 
 private fun SearchResult.toAutoMediaItems(defaultIconUri: Uri): List<MediaItem> = buildList {
-    addAll(tracks.mapNotNull { it.toAutoMediaItem(false, defaultIconUri, "Tracks") })
-    addAll(albums.mapNotNull { it.toAutoMediaItem(false, defaultIconUri, "Albums") })
-    addAll(artists.mapNotNull { it.toAutoMediaItem(false, defaultIconUri, "Artists") })
-    addAll(playlists.mapNotNull { it.toAutoMediaItem(false, defaultIconUri, "Playlists") })
+    artists?.let { list -> addAll(list.toAppMediaItemList().map { it.toAutoMediaItem(true, defaultIconUri) }) }
+    albums?.let { list -> addAll(list.toAppMediaItemList().map { it.toAutoMediaItem(true, defaultIconUri) }) }
+    tracks?.let { list -> addAll(list.toAppMediaItemList().map { it.toAutoMediaItem(false, defaultIconUri) }) }
+    playlists?.let { list -> addAll(list.toAppMediaItemList().map { it.toAutoMediaItem(true, defaultIconUri) }) }
 }
 
 private fun ServerMediaItem.toAutoMediaItem(
@@ -229,17 +234,23 @@ private fun AppMediaItem.toAutoMediaItem(
     defaultIconUri: Uri,
     category: String? = null
 ): MediaItem {
+    val extras = Bundle()
+    extras.putString(MediaIds.CATEGORY_KEY, mediaType.name.lowercase())
+    val id = if(allowBrowse) itemId else "${MediaIds.PLAYABLE_PREFIX}${itemId}"
     return MediaItem(
-        toMediaDescription(defaultIconUri, category),
-        if (allowBrowse && mediaType.isBrowsableInAuto())
-            MediaItem.FLAG_BROWSABLE
-        else
-            MediaItem.FLAG_PLAYABLE
+        MediaDescriptionCompat.Builder()
+            .setTitle(name)
+            .setSubtitle(subtitle)
+            .setMediaId(id)
+            .setIconUri(imageUrl?.let { Uri.parse(it) } ?: defaultIconUri)
+            .setExtras(extras)
+            .build(),
+        if (allowBrowse) MediaItem.FLAG_BROWSABLE else MediaItem.FLAG_PLAYABLE
     )
 }
 
 private fun MediaType.isBrowsableInAuto(): Boolean = this in setOf(
-    MediaType.ARTIST, MediaType.ALBUM
+    MediaType.artist, MediaType.album
 )
 
 fun @receiver:DrawableRes Int.toUri(context: Context): Uri = Uri.parse(
@@ -265,3 +276,16 @@ fun AppMediaItem.toMediaDescription(
         )
     })
     .build()
+
+private fun MediaType.toServerMediaType(): ServerMediaType = when (this) {
+    MediaType.artist -> ServerMediaType.ARTIST
+    MediaType.album -> ServerMediaType.ALBUM
+    MediaType.track -> ServerMediaType.TRACK
+    MediaType.playlist -> ServerMediaType.PLAYLIST
+    MediaType.radio -> ServerMediaType.RADIO
+    MediaType.audiobook -> ServerMediaType.AUDIOBOOK
+    MediaType.podcast -> ServerMediaType.PODCAST
+    MediaType.podcast_episode -> ServerMediaType.PODCAST_EPISODE
+    MediaType.folder -> ServerMediaType.FOLDER
+    MediaType.unknown -> ServerMediaType.UNKNOWN
+}

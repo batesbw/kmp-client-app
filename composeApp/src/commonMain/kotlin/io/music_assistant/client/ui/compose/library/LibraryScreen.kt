@@ -78,7 +78,7 @@ import compose.icons.tablericons.Square
 import compose.icons.tablericons.SquareCheck
 import kotlinx.coroutines.launch
 import io.music_assistant.client.data.model.client.AppMediaItem
-import io.music_assistant.client.data.model.server.MediaType
+import com.mass.client.core.model.MediaType
 import io.music_assistant.client.data.model.server.QueueOption
 import io.music_assistant.client.data.model.client.PlayerData
 import io.music_assistant.client.ui.compose.common.ActionIcon
@@ -143,7 +143,7 @@ data class LibraryScreen(val playerData: PlayerData) : Screen {
                     available: Offset,
                     source: NestedScrollSource
                 ): Offset {
-                    if (available.y < -1 && selectedList?.parentItems?.lastOrNull()?.mediaType == MediaType.ARTIST) {
+                    if (available.y < -1 && selectedList?.parentItems?.lastOrNull()?.mediaType == MediaType.artist) {
                         isFabVisible.value = false
                     } else if (available.y > 1) {
                         isFabVisible.value = true
@@ -157,7 +157,7 @@ data class LibraryScreen(val playerData: PlayerData) : Screen {
                 if (
                     selectedList?.tab == LibraryViewModel.LibraryTab.Artists
                     && selectedList.listState is LibraryViewModel.ListState.Data
-                    && selectedList.parentItems.lastOrNull()?.mediaType == MediaType.ARTIST
+                    && selectedList.parentItems.lastOrNull()?.mediaType == MediaType.artist
                 ) {
                     VerticalHidingContainer(
                         isVisible = isFabVisible.value,

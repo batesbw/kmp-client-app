@@ -4,6 +4,7 @@ import com.mass.client.core.network.ApiService
 import com.mass.client.core.network.ApiServiceImpl
 import com.mass.client.core.network.WebSocketClient
 import com.mass.client.feature_player.viewmodel.PlayerViewModel
+import com.mass.client.feature_home.viewmodel.HomeViewModel
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
@@ -13,6 +14,7 @@ import io.ktor.client.plugins.logging.Logging
 import io.ktor.client.plugins.logging.SIMPLE
 import io.ktor.client.plugins.websocket.WebSockets
 import io.ktor.serialization.kotlinx.json.json
+import io.music_assistant.client.data.MainDataSource
 import kotlinx.serialization.json.Json
 import org.koin.dsl.module
 
@@ -54,7 +56,7 @@ val appModule = module {
 
     // ApiService implementation
     single<ApiService> {
-        ApiServiceImpl(get(), get()) // Injects WebSocketClient and Json
+        ApiServiceImpl(get(), get(), get())
     }
 
     // ViewModels
@@ -63,6 +65,7 @@ val appModule = module {
     // The koin-compose-viewmodel might require Android specific setup or expect androidx.lifecycle.ViewModel.
     // For a simple KoinComponent based ViewModel like ours:
     factory { PlayerViewModel(get(), get(), get()) }
+    factory { HomeViewModel(get()) }
 
     // TODO: Add Repositories as they are created
 }

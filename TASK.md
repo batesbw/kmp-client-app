@@ -1,5 +1,41 @@
 # Project Tasks: kmp-client-app UI/UX and Feature Parity
 
+## Completed ✅
+
+*   **[X] Task:** Initial Compose app structure with navigation.
+    *   **Date Added:** 2024-07-31
+    *   **Date Completed:** 2024-07-31
+
+*   **[X] Task:** Home screen with placeholder content.
+    *   **Date Added:** 2024-07-31
+    *   **Date Completed:** 2024-07-31
+
+*   **[X] Task:** Network layer integration.
+    *   **Date Added:** 2024-07-31
+    *   **Date Completed:** 2024-07-31
+
+*   **[X] Task:** Implement new Home Screen with music focus.
+    *   **Date Added:** 2024-07-31
+    *   **Date Completed:** 2025-01-25
+    *   **Sub-tasks:**
+        *   **[X]** Design Compose UI for Home screen featuring horizontally scrollable lists of artists and albums. (Covered by existing placeholders, will be refined)
+        *   **[X]** Design Compose UI for Home screen to display "Recently Played" items. (Created `RecentlyPlayedSection.kt`)
+        *   **[X]** Create/update ViewModel to fetch artist, album, and recently played data. (`HomeViewModel` updated for `ItemMapping`)
+        *   **[X]** Integrate ViewModel with the new Home screen UI. (`RecentlyPlayedSection` called in `HomeScreen`)
+        *   **[X]** Ensure navigation from these lists (e.g., to an artist's albums or an album's tracks - placeholder for now).
+        *   **[X]** Resolved build errors with MediaType enum conflicts and type mismatches. (2025-01-25)
+
+## In Progress 🚧
+
+*   **[ ] Task:** Test and Debug Recently Played Functionality
+    *   **Date Added:** 2025-01-25
+    *   **Sub-tasks:**
+        *   **[ ]** Test recently played items display in app
+        *   **[ ]** Debug WebSocket connection and data retrieval
+        *   **[ ]** Verify alignment with web frontend behavior
+
+## To Do 📋
+
 This document tracks the specific tasks required to achieve the goals outlined in `PLANNING.md`. It will be updated as the project progresses.
 
 **Date Format for Tasks:** YYYY-MM-DD

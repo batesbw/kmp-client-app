@@ -60,14 +60,10 @@ private val DarkColorScheme = darkColorScheme(
 
 @Composable
 fun KmpClientAppTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    // darkTheme: Boolean = isSystemInDarkTheme(), // Always use dark theme
     content: @Composable () -> Unit
 ) {
-    val colorScheme = if (darkTheme) {
-        DarkColorScheme
-    } else {
-        LightColorScheme
-    }
+    val colorScheme = DarkColorScheme // Always use DarkColorScheme
 
     MaterialTheme(
         colorScheme = colorScheme,

@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class MediaItemImage(
-    val type: ImageType, // Enum
+    val type: String, // e.g. "thumb"
     val path: String,
     val provider: String,
     val remotely_accessible: Boolean
@@ -56,7 +56,7 @@ data class Track(
     override val name: String,
     override val version: String? = null,
     override val uri: String,
-    override val media_type: MediaType = MediaType.TRACK,
+    override val media_type: MediaType = MediaType.track,
     override val is_playable: Boolean = true,
     override val provider_mappings: List<ProviderMapping>? = null,
     override val metadata: MediaItemMetadata? = null,
@@ -76,7 +76,7 @@ data class Album(
     override val name: String,
     override val version: String? = null,
     override val uri: String,
-    override val media_type: MediaType = MediaType.ALBUM,
+    override val media_type: MediaType = MediaType.album,
     override val is_playable: Boolean = false, // Albums themselves aren't directly played, their tracks are
     override val provider_mappings: List<ProviderMapping>? = null,
     override val metadata: MediaItemMetadata? = null,
@@ -94,7 +94,7 @@ data class Artist(
     override val name: String,
     override val version: String? = null,
     override val uri: String,
-    override val media_type: MediaType = MediaType.ARTIST,
+    override val media_type: MediaType = MediaType.artist,
     override val is_playable: Boolean = false, // Artists themselves aren't directly played
     override val provider_mappings: List<ProviderMapping>? = null,
     override val metadata: MediaItemMetadata? = null,
@@ -109,7 +109,7 @@ data class ItemMapping(
     val provider: String,
     val name: String,
     val version: String? = null,
-    val uri: String,
+    val uri: String? = null,
     val media_type: MediaType, // Enum
     val available: Boolean,
     val image: MediaItemImage? = null
@@ -141,3 +141,27 @@ data class PlayableTrack(
 }
 
 // TODO: Define Radio, Playlist, Audiobook, Podcast, PodcastEpisode, BrowseFolder when needed 
+
+@Serializable
+enum class MediaType {
+    artist, // Changed to lowercase
+    album,  // Changed to lowercase
+    track,  // Changed to lowercase
+    playlist, // Changed to lowercase
+    radio,    // Changed to lowercase
+    unknown,  // Changed to lowercase
+    folder,   // Changed to lowercase
+    audiobook, // Changed to lowercase
+    podcast,   // Changed to lowercase
+    podcast_episode // Changed to lowercase
+}
+
+@Serializable
+enum class AlbumType { // Assuming this might also come as lowercase from server if used
+    album,
+    single,
+    compilation,
+    unknown
+}
+
+// ... other models like Player, PlayerQueue etc. if they use MediaType or AlbumType directly 
