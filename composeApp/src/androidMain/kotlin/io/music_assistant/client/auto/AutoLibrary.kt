@@ -288,4 +288,5 @@ private fun MediaType.toServerMediaType(): ServerMediaType = when (this) {
     MediaType.podcast_episode -> ServerMediaType.PODCAST_EPISODE
     MediaType.folder -> ServerMediaType.FOLDER
     MediaType.unknown -> ServerMediaType.UNKNOWN
+    MediaType.flow_stream -> ServerMediaType.UNKNOWN // Treat flow_stream as unknown for now
 }

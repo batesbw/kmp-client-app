@@ -62,7 +62,7 @@ data class Track(
     override val metadata: MediaItemMetadata? = null,
     override val favorite: Boolean? = null,
 
-    val duration: Int, // seconds
+    val duration: Float, // Changed from Int to Float for decimal durations
     val artists: List<Artist>? = null, // Simplified to avoid circular refs with full Artist, could be ItemMapping
     val album: Album? = null, // Simplified, could be ItemMapping
     val disc_number: Int? = null,
@@ -153,7 +153,8 @@ enum class MediaType {
     folder,   // Changed to lowercase
     audiobook, // Changed to lowercase
     podcast,   // Changed to lowercase
-    podcast_episode // Changed to lowercase
+    podcast_episode, // Changed to lowercase
+    flow_stream // Added to handle streaming media from server
 }
 
 @Serializable

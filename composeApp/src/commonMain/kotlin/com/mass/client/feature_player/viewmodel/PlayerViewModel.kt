@@ -88,11 +88,27 @@ class PlayerViewModel(
         viewModelScope.launch {
             try {
                 _availablePlayers.value = apiService.getAllPlayers()
+                println("PlayerViewModel: Successfully loaded ${_availablePlayers.value.size} players")
+                _availablePlayers.value.forEach { player ->
+                    println("PlayerViewModel: Player: ${player.display_name} (${player.player_id}) - available: ${player.available}")
+                }
+                
                 if (_availablePlayers.value.isEmpty()) {
                     println("PlayerViewModel: getAllPlayers returned empty. Waiting for WebSocket events or check server.")
+                } else {
+                    // Auto-select the first available player if no active player is set
+                    // This ensures the global player controls are always functional
+                    if (_observedPlayerId.value == null && _activePlayer.value == null) {
+                        val firstAvailablePlayer = _availablePlayers.value.firstOrNull { it.available }
+                        firstAvailablePlayer?.let { player ->
+                            println("PlayerViewModel: Auto-selecting first available player: ${player.display_name} (${player.player_id})")
+                            setActivePlayer(player.player_id)
+                        }
+                    }
                 }
             } catch (e: Exception) {
                 println("PlayerViewModel: Error fetching all players: ${e.message}")
+                e.printStackTrace()
             }
         }
     }
@@ -111,6 +127,12 @@ class PlayerViewModel(
                             currentList.add(player)
                         }
                         _availablePlayers.value = currentList
+                        
+                        // Auto-select this player if no active player is currently set
+                        if (_observedPlayerId.value == null && _activePlayer.value == null && player.available) {
+                            println("PlayerViewModel: Auto-selecting newly added available player: ${player.display_name} (${player.player_id})")
+                            setActivePlayer(player.player_id)
+                        }
                         
                         if (player.player_id == _observedPlayerId.value) {
                             _activePlayer.value = player

@@ -19,7 +19,7 @@ data class PlayerMedia(
     val artist: String? = null,
     val album: String? = null,
     val image_url: String? = null,
-    val duration: Int? = null, // seconds
+    val duration: Float? = null, // Changed from Int to Float for decimal durations
     val queue_id: String? = null,
     val queue_item_id: String? = null
 )
@@ -47,7 +47,7 @@ data class Player(
     val volume_level: Int? = null,
     val volume_muted: Boolean? = null,
     val elapsed_time: Float? = null, // Using Float for more precision if server sends it
-    val elapsed_time_last_updated: Long? = null, // Timestamp
+    val elapsed_time_last_updated: Double? = null, // Changed from Long to Double for decimal timestamps
     val current_media: PlayerMedia? = null,
 
     val group_childs: List<String> = emptyList(),
@@ -66,7 +66,7 @@ data class QueueItem(
     val queue_id: String,
     val queue_item_id: String,
     val name: String,
-    val duration: Int, // seconds
+    val duration: Float, // Changed from Int to Float for decimal durations
     val sort_index: Int,
     val streamdetails: StreamDetails? = null,
     val media_item: PlayableMediaItem? = null, // Using our sealed class
@@ -85,7 +85,7 @@ data class PlayerQueue(
     val repeat_mode: RepeatMode, // Enum
     val current_index: Int? = null,
     val elapsed_time: Float, // Using Float for more precision
-    val elapsed_time_last_updated: Long, // Timestamp
+    val elapsed_time_last_updated: Double, // Changed from Long to Double for decimal timestamps
     val state: PlayerState, // Enum
     val current_item: QueueItem? = null,
     val next_item: QueueItem? = null

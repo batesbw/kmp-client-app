@@ -19,15 +19,18 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.tab.CurrentTab
 import cafe.adriel.voyager.navigator.tab.LocalTabNavigator
 import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabNavigator
 import com.mass.client.core.network.WebSocketClient
 // import com.mass.client.di.allModules // No longer needed here
+import com.mass.client.feature_player.ui.NowPlayingScreen
 import com.mass.client.navigation.HomeTab
 import com.mass.client.navigation.LibraryTab
 import com.mass.client.navigation.SearchTab
+import com.mass.client.ui.components.GlobalPlayerControls
 import com.mass.client.ui.theme.KmpClientAppTheme
 import com.mass.client.ui.theme.DarkPrimary // For selected item color
 import kotlinx.coroutines.launch
@@ -71,22 +74,33 @@ fun App() {
             }
         }
 
-        TabNavigator(HomeTab) { tabNavigator ->
-            Scaffold(
-                content = { paddingValues -> // These paddingValues now account for top bars AND bottom controls
-                    CurrentTab() // Screens will use these paddingValues
-                },
-                bottomBar = {
-                    Column {
-                        BottomPlayerControlsPlaceholder() // Global player controls
-                        NavigationBar { // Tab navigation
-                            TabNavigationItem(HomeTab)
-                            TabNavigationItem(SearchTab)
-                            TabNavigationItem(LibraryTab)
+        // Main navigator for full-screen navigation (like Now Playing)
+        Navigator(HomeTab) { navigator ->
+            TabNavigator(HomeTab) { tabNavigator ->
+                Scaffold(
+                    content = { paddingValues -> // These paddingValues now account for top bars AND bottom controls
+                        CurrentTab() // Screens will use these paddingValues
+                    },
+                    bottomBar = {
+                        Column {
+                            // Global player controls (mini player)
+                            GlobalPlayerControls(
+                                onExpandToFullPlayer = {
+                                    // Navigate to full Now Playing screen
+                                    navigator.push(NowPlayingScreen())
+                                }
+                            )
+                            
+                            // Tab navigation
+                            NavigationBar {
+                                TabNavigationItem(HomeTab)
+                                TabNavigationItem(SearchTab)
+                                TabNavigationItem(LibraryTab)
+                            }
                         }
                     }
-                }
-            )
+                )
+            }
         }
     }
 }

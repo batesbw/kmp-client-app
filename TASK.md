@@ -25,6 +25,23 @@
         *   **[X]** Ensure navigation from these lists (e.g., to an artist's albums or an album's tracks - placeholder for now).
         *   **[X]** Resolved build errors with MediaType enum conflicts and type mismatches. (2025-01-25)
 
+*   **[X] Task:** Implement Global Player Controls (Mini Player)
+    *   **Date Added:** 2025-01-25
+    *   **Date Completed:** 2025-01-25
+    *   **Sub-tasks:**
+        *   **[X]** Create GlobalPlayerControls composable component
+        *   **[X]** Implement track info display (artwork, title, artist)
+        *   **[X]** Add play/pause button with proper state management
+        *   **[X]** Add progress bar with seek functionality
+        *   **[X]** Add next/previous track buttons
+        *   **[X]** Integrate with existing PlayerViewModel
+        *   **[X]** Add click-to-expand to full Now Playing screen
+        *   **[X]** Ensure state synchronization with WebSocket events
+        *   **[X]** Handle responsive design for different screen sizes
+        *   **[X]** Fix PlayerType enum serialization for server compatibility
+        *   **[X]** Add auto-selection of available players for always-visible controls
+        *   **[X]** Ensure global player is ALWAYS visible when players are available
+
 ## In Progress 🚧
 
 *   **[ ] Task:** Test and Debug Recently Played Functionality

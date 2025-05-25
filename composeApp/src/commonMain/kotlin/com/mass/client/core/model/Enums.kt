@@ -1,5 +1,7 @@
 package com.mass.client.core.model
 
+import kotlinx.serialization.SerialName
+
 // Enums based on frontend/src/plugins/api/interfaces.ts
 
 // MediaType and AlbumType removed, defined in MediaItems.kt
@@ -36,34 +38,63 @@ enum class RepeatMode {
 }
 
 enum class PlayerState {
+    @SerialName("idle")
     IDLE,
+    @SerialName("paused")
     PAUSED,
+    @SerialName("playing")
     PLAYING
 }
 
 enum class PlayerType {
+    @SerialName("player")
     PLAYER,
+    @SerialName("group")
     GROUP,
+    @SerialName("stereo_pair")
     STEREO_PAIR
 }
 
-// Simplified PlayerFeature for now, can be expanded
+// PlayerFeature enum based on frontend/src/plugins/api/interfaces.ts
 enum class PlayerFeature {
+    @SerialName("power")
     POWER,
+    @SerialName("volume_set")
     VOLUME_SET,
+    @SerialName("volume_mute")
     VOLUME_MUTE,
+    @SerialName("pause")
     PAUSE,
+    @SerialName("set_members")
+    SET_MEMBERS,
+    @SerialName("multi_device_dsp")
+    MULTI_DEVICE_DSP,
+    @SerialName("seek")
     SEEK,
-    NEXT_PREVIOUS
-    // Add other features as needed, e.g., PLAY_ANNOUNCEMENT, ENQUEUE, SELECT_SOURCE
+    @SerialName("next_previous")
+    NEXT_PREVIOUS,
+    @SerialName("play_announcement")
+    PLAY_ANNOUNCEMENT,
+    @SerialName("enqueue")
+    ENQUEUE,
+    @SerialName("select_source")
+    SELECT_SOURCE,
+    @SerialName("gapless_playback")
+    GAPLESS_PLAYBACK
 }
 
 // Simplified HidePlayerOption
 enum class HidePlayerOption {
+    @SerialName("never")
     NEVER,
+    @SerialName("when_off")
     WHEN_OFF,
+    @SerialName("when_group_active")
     WHEN_GROUP_ACTIVE,
+    @SerialName("when_synced")
     WHEN_SYNCED,
+    @SerialName("when_unavailable")
     WHEN_UNAVAILABLE,
+    @SerialName("always")
     ALWAYS
 } 

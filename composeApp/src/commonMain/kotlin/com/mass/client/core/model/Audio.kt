@@ -22,7 +22,7 @@ data class StreamDetails(
     val audio_format: AudioFormat,
     val media_type: MediaType, // Enum
     val stream_title: String? = null,
-    val duration: Int? = null, // seconds
+    val duration: Float? = null, // Changed from Int to Float for decimal durations
     val queue_id: String? = null,
     // Skipping loudness and DSP details for initial model simplicity, can be added later
     // val loudness: Float? = null,
