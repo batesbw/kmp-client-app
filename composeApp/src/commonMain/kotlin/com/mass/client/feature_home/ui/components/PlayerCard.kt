@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Speaker
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -18,12 +19,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
-// Import the models from their new location
 import com.mass.client.feature_home.model.UiPlayer
-import com.mass.client.feature_home.model.UiTrack
-import com.mass.client.feature_home.model.UiPlayerState
-
-// Dummy data models are now removed from here
 
 private val MinPlayerCardHeight = 88.dp
 
@@ -34,14 +30,15 @@ fun ActivePlayerCard(
     onPauseClicked: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val track = player.currentTrack ?: UiTrack("Unknown Track", "Unknown Artist", "Unknown Album")
+    val currentTrackDisplay = player.currentTrackName ?: "Nothing playing"
+    val subTitleText = player.name
 
     ElevatedCard(
         modifier = modifier
             .fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer // A slightly different background for active players
+            containerColor = MaterialTheme.colorScheme.secondaryContainer
         )
     ) {
         Row(
@@ -51,7 +48,6 @@ fun ActivePlayerCard(
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Album Art or Placeholder
             Box(
                 modifier = Modifier
                     .size(64.dp)
@@ -59,16 +55,16 @@ fun ActivePlayerCard(
                     .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
-                if (player.albumArtUri != null) {
+                if (player.artworkUrl != null) {
                     AsyncImage(
-                        model = player.albumArtUri,
-                        contentDescription = "Album art for ${track.album}",
+                        model = player.artworkUrl,
+                        contentDescription = "Album art for ${currentTrackDisplay}",
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
                     )
                 } else {
                     Image(
-                        imageVector = Icons.Default.Speaker, // Placeholder if no album art
+                        imageVector = Icons.Default.Speaker,
                         contentDescription = "Playing on ${player.name}",
                         colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onSurfaceVariant),
                         modifier = Modifier.size(32.dp)
@@ -78,47 +74,32 @@ fun ActivePlayerCard(
 
             Spacer(modifier = Modifier.width(12.dp))
 
-            // Track Info and Player Name
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = track.title,
+                    text = currentTrackDisplay,
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     color = MaterialTheme.colorScheme.onSecondaryContainer
                 )
                 Text(
-                    text = "${track.artist} - ${track.album}",
+                    text = subTitleText,
                     style = MaterialTheme.typography.bodySmall,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
                 )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = player.name,
-                    style = MaterialTheme.typography.bodySmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.6f)
-                )
             }
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // Pause Button
-            if (player.state == UiPlayerState.PLAYING) {
-                IconButton(onClick = onPauseClicked) { // Use the passed callback
-                    Icon(
-                        imageVector = Icons.Default.Pause,
-                        contentDescription = "Pause",
-                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                        modifier = Modifier.size(36.dp)
-                    )
-                }
-            } else if (player.state == UiPlayerState.PAUSED) {
-                 // Optionally show a Play button or different icon when paused
-                Text("Paused", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f))
+            IconButton(onClick = onPauseClicked) {
+                Icon(
+                    imageVector = if (player.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                    contentDescription = if (player.isPlaying) "Pause" else "Play",
+                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                    modifier = Modifier.size(36.dp)
+                )
             }
         }
     }
@@ -132,7 +113,7 @@ fun InactivePlayerItem(
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium, // Reverted to medium for inactive items
+        shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Row(
@@ -143,14 +124,14 @@ fun InactivePlayerItem(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) { // Center content vertically
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
                 Text(
                     text = player.name,
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    text = player.state.name.lowercase().replaceFirstChar { it.uppercase() },
+                    text = if (player.isPlaying) player.currentTrackName ?: "Playing" else "Idle",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                 )

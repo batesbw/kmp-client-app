@@ -67,7 +67,7 @@ fun PlayersSection(homeViewModel: HomeViewModel) {
 
 @Composable
 fun PlayerCard(player: UiPlayer, onPauseClicked: () -> Unit) {
-    if (player.state == com.mass.client.feature_home.model.UiPlayerState.PLAYING || player.state == com.mass.client.feature_home.model.UiPlayerState.PAUSED) {
+    if (player.isActivePlayer) {
         ActivePlayerCard(
             player = player,
             onPauseClicked = onPauseClicked

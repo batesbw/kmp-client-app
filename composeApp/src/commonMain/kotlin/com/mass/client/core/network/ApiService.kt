@@ -11,9 +11,10 @@ import com.mass.client.core.model.Album
 import com.mass.client.core.model.ItemMapping
 import com.mass.client.core.model.MediaType
 import com.mass.client.feature_home.model.UiPlayer
-import com.mass.client.feature_home.model.RecentlyPlayedItemUiModel
-import io.music_assistant.client.data.model.server.ServerMediaItem
+// import com.mass.client.feature_home.model.RecentlyPlayedItemUiModel // This model seems unused here, consider removing if not needed elsewhere
+// import io.music_assistant.client.data.model.server.ServerMediaItem // This import seems unused, consider removing
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.serialization.json.JsonElement // Correct JsonElement import
 
 /**
  * Interface for all Music Assistant API calls.
@@ -52,7 +53,7 @@ interface ApiService {
         queueId: String,
         media: List<String>, // Simplified to list of URIs for now
         option: QueueOption? = null,
-        radioMode: Boolean? = null,
+        radioMode: Boolean? = false,
         startItemId: String? = null
     )
 
@@ -92,7 +93,10 @@ interface ApiService {
     suspend fun getAllPlayers(): List<Player>
     suspend fun getAllPlayerQueues(): List<PlayerQueue>
     suspend fun getQueueItems(queueId: String, limit: Int = 50, offset: Int = 0): List<QueueItem>
+    
+    suspend fun getLibrarySyncStatus(): JsonElement? // Keep this if it's a valid, used method
 
-    // WebSocket related methods might be exposed via a different mechanism
-    // or implicitly handled by the implementation that updates reactive state holders.
+    suspend fun getCoreConfigValue(domain: String, key: String): JsonElement? // Added new method
+
+    // TODO: Add other necessary API calls based on frontend analysis
 } 

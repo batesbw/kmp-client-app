@@ -30,6 +30,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.coroutines.flow.combine
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ApiServiceImpl(
@@ -38,23 +39,21 @@ class ApiServiceImpl(
     private val mainDataSource: MainDataSource
 ) : ApiService {
 
-    // CoroutineScope for stateIn operator
     private val serviceScope = CoroutineScope(Dispatchers.Default)
 
     override val players: StateFlow<List<UiPlayer>> =
-        mainDataSource.playersData
-            .map { playerDataList ->
-                playerDataList.map { playerData ->
-                    playerData.toUiPlayer()
-                }
+        mainDataSource.playersData.combine(mainDataSource.selectedPlayerData) { playerDataList, selectedPlayerInfo ->
+            val activePlayerId = selectedPlayerInfo?.playerId
+            playerDataList.map { playerData ->
+                playerData.toUiPlayer(activePlayerId)
             }
-            .stateIn(
-                scope = serviceScope,
-                started = SharingStarted.WhileSubscribed(5000),
-                initialValue = emptyList()
-            )
+        }
+        .stateIn(
+            scope = serviceScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
 
-    // Helper to construct args map with JsonElement values
     private fun jsonArgs(vararg pairs: Pair<String, Any?>): Map<String, JsonElement?>? {
         val map = mutableMapOf<String, JsonElement?>()
         for ((key, value) in pairs) {
@@ -64,26 +63,20 @@ class ApiServiceImpl(
                 is Number -> map[key] = JsonPrimitive(value)
                 is Boolean -> map[key] = JsonPrimitive(value)
                 is List<*> -> {
-                    // Assuming lists are of primitives for now, primarily strings (URIs)
                     map[key] = buildJsonArray {
-                        value.forEach { item ->
-                            when (item) {
-                                is String -> add(JsonPrimitive(item))
-                                is Number -> add(JsonPrimitive(item))
-                                is Boolean -> add(JsonPrimitive(item))
-                                // Add other primitive list types if needed
-                                else -> add(JsonNull) // Or throw exception for unsupported list item type
+                        value.forEach {
+                            when (it) {
+                                is String -> add(JsonPrimitive(it))
+                                is Number -> add(JsonPrimitive(it))
+                                is Boolean -> add(JsonPrimitive(it))
+                                else -> add(JsonNull)
                             }
                         }
                     }
                 }
-                // Add more complex type handling to JsonElement if necessary
                 else -> {
-                    // For unknown types, either serialize to a string or handle as an error.
-                    // Direct serialization of Any? to JsonElement is not straightforward without context.
-                    // For now, converting to string and wrapping in JsonPrimitive, or using JsonNull.
-                    println("ApiServiceImpl: WARN - jsonArgs encountered an unhandled type for key '$key': ${value?.let { it::class.simpleName } ?: "null"}. Storing as JsonNull.")
-                    map[key] = JsonNull // Or JsonPrimitive(value.toString()) if that's desired and safe
+                    println("ApiServiceImpl: WARN - jsonArgs unhandled type for key '$key': ${value::class.simpleName}. Storing as JsonNull.")
+                    map[key] = JsonNull
                 }
             }
         }
@@ -156,7 +149,7 @@ class ApiServiceImpl(
         webSocketClient.awaitConnectionReady()
         webSocketClient.sendCommand("player_queues/play_media", jsonArgs(
             "queue_id" to queueId,
-            "media" to media, // jsonArgs helper will turn this into a JsonArray of JsonPrimitives
+            "media" to media,
             "option" to option?.name?.lowercase(),
             "radio_mode" to radioMode,
             "start_item" to startItemId
@@ -196,8 +189,6 @@ class ApiServiceImpl(
             "offset" to offset,
             "order_by" to orderBy
         ))
-        // Assuming the server endpoint for artists is "music/artists"
-        // and it supports these parameters. This needs to be verified with the server API.
         return resultElement?.let { json.decodeFromJsonElement(ListSerializer(Artist.serializer()), it) } ?: emptyList()
     }
 
@@ -216,8 +207,6 @@ class ApiServiceImpl(
             "offset" to offset,
             "order_by" to orderBy
         ))
-        // Assuming the server endpoint for albums is "music/albums"
-        // and it supports these parameters. This needs to be verified with the server API.
         return resultElement?.let { json.decodeFromJsonElement(ListSerializer(Album.serializer()), it) } ?: emptyList()
     }
 
@@ -243,9 +232,20 @@ class ApiServiceImpl(
         return resultElement?.let { json.decodeFromJsonElement(ListSerializer(QueueItem.serializer()), it) } ?: emptyList()
     }
 
+    override suspend fun getLibrarySyncStatus(): JsonElement? {
+        webSocketClient.awaitConnectionReady()
+        println("ApiServiceImpl: Fetching library sync status...")
+        return try {
+            webSocketClient.sendCommandAndWaitForResponse("music/syncstatus", null)
+        } catch (e: Exception) {
+            println("ApiServiceImpl: Error calling music/syncstatus: ${e.message}")
+            null
+        }
+    }
+
     override suspend fun getRecentlyPlayedItems(
         limit: Int,
-        mediaTypes: List<com.mass.client.core.model.MediaType>?
+        mediaTypes: List<MediaType>?
     ): List<ItemMapping> {
         webSocketClient.awaitConnectionReady()
         val args = mutableMapOf<String, Any?>("limit" to limit)
@@ -255,21 +255,20 @@ class ApiServiceImpl(
         println("#### ApiServiceImpl: Sending command music/recently_played_items with args: $args")
         try {
             val resultElement = webSocketClient.sendCommandAndWaitForResponse(
-                "music/recently_played_items", // Correct endpoint
+                "music/recently_played_items",
                 jsonArgs(*args.toList().toTypedArray())
             )
             println("#### ApiServiceImpl: music/recently_played_items RAW RESPONSE: $resultElement")
             if (resultElement == null) {
-                println("#### ApiServiceImpl: music/recently_played_items - Received NULL resultElement from sendCommandAndWaitForResponse")
+                println("#### ApiServiceImpl: music/recently_played_items - Received NULL resultElement")
                 return emptyList()
             }
-            // Decode into ItemMapping
             val items = json.decodeFromJsonElement(ListSerializer(ItemMapping.serializer()), resultElement)
 
             val baseUrl = try {
                 webSocketClient.serverInfo.first().base_url
             } catch (e: Exception) {
-                println("#### ApiServiceImpl: Could not get baseUrl from webSocketClient.serverInfo: ${e.message}")
+                println("#### ApiServiceImpl: Could not get baseUrl: ${e.message}")
                 null
             }
 
@@ -278,32 +277,40 @@ class ApiServiceImpl(
                     item.image?.let { img ->
                         if (img.path.isNotBlank()) {
                             if (!img.remotely_accessible || !img.path.startsWith("http")) {
-                                // Path needs proxying
-                                val encodedPath =   img.path.encodeURLQueryComponent()
-                                val provider = img.provider.encodeURLQueryComponent() // Provider name might also need encoding if it contains special chars
+                                val encodedPath = img.path.encodeURLQueryComponent()
+                                val provider = img.provider.encodeURLQueryComponent()
                                 val proxiedUrl = "$baseUrl/imageproxy?path=$encodedPath&provider=$provider"
-                                println("#### ApiServiceImpl: Item: ${item.name}, Original path: ${img.path}, Provider: ${img.provider}, RemotelyAccessible: ${img.remotely_accessible} -> Using PROXY URL: $proxiedUrl")
+                                println("#### ApiServiceImpl: Item: ${item.name} -> PROXY URL: $proxiedUrl")
                                 item.copy(image = img.copy(path = proxiedUrl))
                             } else {
-                                // Path is already absolute and remotely accessible
-                                println("#### ApiServiceImpl: Item: ${item.name}, Path already absolute and remotely accessible: ${img.path}")
                                 item
                             }
                         } else {
-                            // Image path is blank
-                            println("#### ApiServiceImpl: Item: ${item.name}, Image path is blank.")
                             item
                         }
-                    } ?: item // No image to process
+                    } ?: item
                 }
             } else {
-                println("#### ApiServiceImpl: baseUrl was null, returning items as is.")
                 items
             }
         } catch (e: Exception) {
-            println("#### ApiServiceImpl: ERROR in getRecentlyPlayedItems for music/recently_played_items: ${e.message}")
-            println("#### ApiServiceImpl: Exception details: ${e.toString()}")
+            println("#### ApiServiceImpl: ERROR in getRecentlyPlayedItems: ${e.message}")
             return emptyList()
+        }
+    }
+
+    override suspend fun getCoreConfigValue(domain: String, key: String): JsonElement? {
+        webSocketClient.awaitConnectionReady()
+        val args = jsonArgs("domain" to domain, "key" to key)
+        println("#### ApiServiceImpl: Sending command config/core/get_value with args: $args")
+        return try {
+            webSocketClient.sendCommandAndWaitForResponse(
+                "config/core/get_value",
+                args
+            )
+        } catch (e: Exception) {
+            println("ApiServiceImpl: Error calling config/core/get_value for domain=$domain, key=$key: ${e.message}")
+            null
         }
     }
 } 
