@@ -32,7 +32,10 @@
     *   **Sub-tasks:**
         *   **[ ]** Test recently played items display in app
         *   **[ ]** Debug WebSocket connection and data retrieval
-        *   **[ ]** Verify alignment with web frontend behavior
+        *   **[X]** Verify alignment with web frontend behavior (Initial UI for play/context buttons added to cards)
+        *   **[X]** Implement Play button functionality on RecentlyPlayedItemCard
+        *   **[ ]** Implement Context Menu functionality on RecentlyPlayedItemCard
+        *   **[ ]** Display album art for recently played items
 
 ## To Do 📋
 

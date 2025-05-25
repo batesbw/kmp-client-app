@@ -1,26 +1,39 @@
 package com.mass.client.feature_home.ui.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Card
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+// import androidx.compose.ui.layout.ContentScale // Not directly used in this card's ArtworkImage call if we rely on ArtworkImage's internal scale
 import androidx.compose.ui.unit.dp
 import com.mass.client.core.model.ItemMapping
 // TODO: Add KamelImage for actual image loading
 // import io.kamel.image.KamelImage
 // import io.kamel.image.asyncPainterResource
 
+// Added import for ArtworkImage
+import com.mass.client.feature_player.ui.ArtworkImage
+import com.mass.client.feature_home.viewmodel.HomeViewModel
+
 @Composable
 fun RecentlyPlayedSection(
     recentlyPlayedItems: List<ItemMapping>,
     onItemClick: (ItemMapping) -> Unit,
+    homeViewModel: HomeViewModel,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
@@ -36,7 +49,12 @@ fun RecentlyPlayedSection(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(recentlyPlayedItems, key = { "${it.provider}-${it.item_id}" }) { item ->
-                    RecentlyPlayedItemCard(item = item, onClick = { onItemClick(item) })
+                    RecentlyPlayedItemCard(
+                        item = item,
+                        onCardClick = { onItemClick(item) },
+                        onPlayClick = { homeViewModel.onPlayRecentlyPlayedItem(item) },
+                        onMenuClick = { /* TODO: Implement menu action */ println("Menu clicked for ${item.name}") }
+                    )
                 }
             }
         } else {
@@ -52,50 +70,74 @@ fun RecentlyPlayedSection(
 @Composable
 fun RecentlyPlayedItemCard(
     item: ItemMapping,
-    onClick: () -> Unit,
+    onCardClick: () -> Unit,
+    onPlayClick: () -> Unit,
+    onMenuClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
         modifier = modifier
             .width(160.dp)
-            .clickable(onClick = onClick)
+            .clickable(onClick = onCardClick) // Main card click
     ) {
         Column(
-            modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally
+            // horizontalAlignment = Alignment.CenterHorizontally // Let children align themselves
         ) {
-            // Placeholder for AsyncImage - KamelImage would be used here.
             Box(
                 modifier = Modifier
                     .height(140.dp)
                     .fillMaxWidth()
-                    .padding(8.dp),
+                    .clip(MaterialTheme.shapes.medium), // Clip the box for play button background
                 contentAlignment = Alignment.Center
             ) {
-                // TODO: Replace with KamelImage once dependency is added and configured
-                // KamelImage(
-                //    resource = asyncPainterResource(data = item.image?.path ?: ""),
-                //    contentDescription = item.name,
-                //    contentScale = ContentScale.Crop,
-                //    modifier = Modifier.fillMaxSize(),
-                //    onLoading = { Text("Loading...") },
-                //    onFailure = { Text("Failed to load") }
-                // )
-                Text(
-                    text = item.image?.path?.takeLast(20) ?: "No Image", // Show part of path or placeholder
-                    style = MaterialTheme.typography.bodySmall
+                ArtworkImage(
+                    url = item.image?.path,
+                    modifier = Modifier.fillMaxSize() // Artwork fills the Box
                 )
+                // Play button overlay
+                IconButton(
+                    onClick = onPlayClick,
+                    modifier = Modifier
+                        .background(Color.Black.copy(alpha = 0.4f), shape = MaterialTheme.shapes.extraLarge)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.PlayArrow,
+                        contentDescription = "Play ${item.name}",
+                        tint = Color.White,
+                        modifier = Modifier.size(48.dp)
+                    )
+                }
             }
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = item.name,
-                style = MaterialTheme.typography.titleSmall,
-                maxLines = 1,
-                modifier = Modifier.padding(horizontal = 8.dp)
-            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = item.name,
+                    style = MaterialTheme.typography.titleSmall,
+                    maxLines = 2, // Allow two lines for longer names
+                    modifier = Modifier.weight(1f) // Take available space, leave room for icon
+                )
+                IconButton(
+                    onClick = onMenuClick,
+                    modifier = Modifier.size(36.dp) // Smaller icon button
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.MoreVert,
+                        contentDescription = "More options for ${item.name}",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
             // Optional: Add subtitle (e.g., artist name if available and applicable)
             // This requires enhancing ItemMapping or having more specific types
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(8.dp)) // Bottom padding
         }
     }
 }

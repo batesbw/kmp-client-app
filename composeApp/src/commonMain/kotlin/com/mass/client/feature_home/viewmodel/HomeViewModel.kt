@@ -6,6 +6,7 @@ import com.mass.client.core.model.Artist
 import com.mass.client.core.model.MediaType
 import com.mass.client.core.model.AlbumType
 import com.mass.client.core.model.ItemMapping
+import com.mass.client.core.model.QueueOption
 import com.mass.client.feature_home.model.UiPlayer
 import com.mass.client.feature_home.model.UiPlayerState
 import com.mass.client.feature_home.model.UiTrack
@@ -74,9 +75,33 @@ class HomeViewModel(
     fun onRecentlyPlayedItemClicked(item: ItemMapping) { // Changed parameter to ItemMapping
         viewModelScope.launch {
             // Using item.name which is part of ItemMapping
-            println("HomeViewModel: Clicked on recently played: ${item.name} (ID: ${item.item_id}, Type: ${item.media_type})")
+            println("HomeViewModel: Card clicked on recently played: ${item.name} (ID: ${item.item_id}, Type: ${item.media_type})")
             // TODO: Implement navigation or play action via ApiService
             // e.g., apiService.playMedia(queueId = /* target queue */, media = listOf(item.uri), option = QueueOption.PLAY)
+        }
+    }
+
+    fun onPlayRecentlyPlayedItem(item: ItemMapping) {
+        viewModelScope.launch {
+            println("HomeViewModel: Play clicked for recently played: ${item.name} (ID: ${item.item_id}, URI: ${item.uri})")
+            try {
+                val players = apiService.getAllPlayers()
+                if (players.isNotEmpty()) {
+                    val targetPlayerId = players.first().player_id
+                    item.uri?.let { trackUri ->
+                        apiService.playMedia(
+                            queueId = targetPlayerId,
+                            media = listOf(trackUri),
+                            option = QueueOption.PLAY
+                        )
+                        println("HomeViewModel: Requested to play ${item.name} on player $targetPlayerId")
+                    } ?: println("HomeViewModel: Item URI is null for ${item.name}, cannot play.")
+                } else {
+                    println("HomeViewModel: No players available to play ${item.name}.")
+                }
+            } catch (e: Exception) {
+                println("HomeViewModel: Error trying to play recently played item ${item.name}: ${e.message}")
+            }
         }
     }
 

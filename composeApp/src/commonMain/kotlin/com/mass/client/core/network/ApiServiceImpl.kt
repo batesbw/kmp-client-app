@@ -21,6 +21,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.first
+import io.ktor.http.encodeURLQueryComponent
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
@@ -261,10 +263,45 @@ class ApiServiceImpl(
                 println("#### ApiServiceImpl: music/recently_played_items - Received NULL resultElement from sendCommandAndWaitForResponse")
                 return emptyList()
             }
-            return json.decodeFromJsonElement(ListSerializer(ItemMapping.serializer()), resultElement)
+            // Decode into ItemMapping
+            val items = json.decodeFromJsonElement(ListSerializer(ItemMapping.serializer()), resultElement)
+
+            val baseUrl = try {
+                webSocketClient.serverInfo.first().base_url
+            } catch (e: Exception) {
+                println("#### ApiServiceImpl: Could not get baseUrl from webSocketClient.serverInfo: ${e.message}")
+                null
+            }
+
+            return if (baseUrl != null) {
+                items.map { item ->
+                    item.image?.let { img ->
+                        if (img.path.isNotBlank()) {
+                            if (!img.remotely_accessible || !img.path.startsWith("http")) {
+                                // Path needs proxying
+                                val encodedPath =   img.path.encodeURLQueryComponent()
+                                val provider = img.provider.encodeURLQueryComponent() // Provider name might also need encoding if it contains special chars
+                                val proxiedUrl = "$baseUrl/imageproxy?path=$encodedPath&provider=$provider"
+                                println("#### ApiServiceImpl: Item: ${item.name}, Original path: ${img.path}, Provider: ${img.provider}, RemotelyAccessible: ${img.remotely_accessible} -> Using PROXY URL: $proxiedUrl")
+                                item.copy(image = img.copy(path = proxiedUrl))
+                            } else {
+                                // Path is already absolute and remotely accessible
+                                println("#### ApiServiceImpl: Item: ${item.name}, Path already absolute and remotely accessible: ${img.path}")
+                                item
+                            }
+                        } else {
+                            // Image path is blank
+                            println("#### ApiServiceImpl: Item: ${item.name}, Image path is blank.")
+                            item
+                        }
+                    } ?: item // No image to process
+                }
+            } else {
+                println("#### ApiServiceImpl: baseUrl was null, returning items as is.")
+                items
+            }
         } catch (e: Exception) {
             println("#### ApiServiceImpl: ERROR in getRecentlyPlayedItems for music/recently_played_items: ${e.message}")
-            // e.printStackTrace() // Standard Kotlin doesn't have printStackTrace like this in common code, use .toString() or specific logging
             println("#### ApiServiceImpl: Exception details: ${e.toString()}")
             return emptyList()
         }

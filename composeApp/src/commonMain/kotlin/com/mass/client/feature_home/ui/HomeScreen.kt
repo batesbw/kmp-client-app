@@ -65,7 +65,8 @@ fun HomeScreen(
             item { 
                 RecentlyPlayedSection(
                     recentlyPlayedItems = recentlyPlayedItems,
-                    onItemClick = viewModel::onRecentlyPlayedItemClicked
+                    onItemClick = viewModel::onRecentlyPlayedItemClicked,
+                    homeViewModel = viewModel
                 ) 
             }
             item { RandomArtistsSectionPlaceholder() }
